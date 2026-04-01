@@ -3,14 +3,26 @@ title: "Minnesota Timberwolves Shot Analysis"
 font: 12pt
 date: "4-3-2026"
 output:
-  pdf_document: default
-  word_document: default
   html_document: default
+  word_document: default
+  pdf_document: default
 ---
 
-Minnesota Timberwolves Team Shot Charts Over Anthony Edwards' First 5 Seasons
-Shot Charts:
-```{r, echo=FALSE, warning=FALSE, message=FALSE}
+# Minnesota Timberwolves Team Shot Charts Over Anthony Edwards' First 5 Seasons
+## Key Findings:
+   - Absence of mid-range shot attempts
+   
+   - More shots around the rim starting in 2022
+   
+   - More efficient shooting around the rim since 2022
+   
+   - Increase in 3-pointer spread since 2020
+   
+   - Increase in 3-point percentage
+   
+   
+## Shot Charts:
+```{r, echo=FALSE, warning=FALSE, message=FALSE, fig.width=12, fig.height=8}
 ##Packages Installed and Used
 library(tidyverse)
 library(ggplot2)
@@ -85,25 +97,22 @@ ggplotly(wolves_plot, tooltip = "text")
 ```
 
    
-Key Findings:
-   - Absence of mid-range shot attempts
-   - More shots around the rim starting in 2022
-   - More efficient shooting around the rim since 2022
-   - Increase in 3-pointer spread since 2020
-   - Increase in 3-point percentage
-   
-Detailed Explanation of Findings:
+## Detailed Explanation of Findings:
   Since 2020, there has been a steady absence of mid-range shot attempts in Timberwolves games. This is clear from the plots because places on the court with less than four shot attempts are filtered out. This creates a blank space from just inside the three-point line. Additionally, the interactive plot shows many other mid-range locations have 4-10 shot attempts. The reason for this is mid-range shot percentages and three-point shot percentages are fairly similar. Since three pointers are worth more points, the expected value is higher and taking a mid-range attempt doesn't make statistical sense. In comparison to mid-range shot attempts, locations around the rim have over 100 shot attempts and the location one foot from the center of the rim has over 1,000. Additionally, most of the three-point shots from near the line have 25-100 shot attempts, showing a preference for three-pointers over mid-range shots.
+  
   The absence of mid-range shot attempts has led to an increase in shots around the rim and from three-point range. When looking at the plots, hovering over shots in the center of the court in front of the rim shows an increase from 1,083 shot attempts in 2021 to 1,160 in 2022, 1,187 in 2023, and 1,151 in 2024. This large increase is likely due to the Timberwolves' acquisition of center Rudy Gobert, who is one of the league's most efficient shooters from around the rim.
+  
   In 2020 and 2021, the Timberwolves shot 67.4% and 72.3% from directly in front of the rim. With shots around the rim increasing, the field goal percentage from this area also increased. In 2022, the Wolves shot 73.1% from this area. In 2023, the Wolves shot 76.4% from this area, and in 2024, they shot 75.2% (this trend is present in other areas around the rim too). To compare more shots, the plots allow for interaction. Just hover the mouse over any hexagon on the plot and it will show attempts and field goal percentage.
+  
   With the absence of mid-range shot attempts, the shot distribution of three-point shot attempts has also changed. The plots show that although the number of three pointers taken may not have increased, the locations shots are taken from have changed. In 2020, many of the Timberwolves' three-pointers came from the top of the key. However, in the following years, the Timberwolves began taking more shots from the wings and corners. In 2020, the Timberwolves took roughly 30 more three-point attempts from the top of the key than in 2024. However, the Timberwolves took more shots from the wings and corners in 2024. In fact, the Timberwolves attempted less than four threes from locations within 4 feet of the baseline in 2020, so that spot is filtered out of the plots due to insufficient data.
+  
   The change in three-point locations has also led to a slight increase in three-point shooting percentages. By hovering over different points on the plots, slight increases in three-point percentages have been recorded over the years. Using the top of the key as an example again, in 2020, the Timberwolves shot 33.6% from this area. In 2024, the Timberwolves shot 46.7% from this area. To be clear, this is a huge change, and not all locations have this big of a change, but the increase in field goal percentage is still present.
   
    
    
  
    
-```{r,echo=FALSE, warning=FALSE, message=FALSE}
+```{r,echo=FALSE, warning=FALSE, message=FALSE, include=FALSE}
 ##What if the NBA had a 4 point line?
 
 ##install.packages("ggforce")
@@ -154,5 +163,6 @@ court_example <- ggplot()+
   theme_minimal()
 
 court_example
+##To see the court, remove "include=FALSE"
 ```
 
