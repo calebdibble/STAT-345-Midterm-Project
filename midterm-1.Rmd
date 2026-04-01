@@ -1,0 +1,158 @@
+---
+title: "Minnesota Timberwolves Shot Analysis"
+font: 12pt
+date: "4-3-2026"
+output:
+  pdf_document: default
+  word_document: default
+  html_document: default
+---
+
+Minnesota Timberwolves Team Shot Charts Over Anthony Edwards' First 5 Seasons
+Shot Charts:
+```{r, echo=FALSE, warning=FALSE, message=FALSE}
+##Packages Installed and Used
+library(tidyverse)
+library(ggplot2)
+##install.packages("hoopR")
+library(hoopR)
+##install.packages("png")
+library(png)
+##install.packages("raster")
+library(raster)
+library(grid)
+##install.packages("plotly")
+library(plotly)
+##install.packages("hexbin")
+library(hexbin)
+
+
+
+##Download background image
+timberwolves_court <- readPNG("timberwolves_court.png")
+
+
+
+##Gathering Shot Data
+##Anthony Edwards was drafted in 2020, so this is his first 5 seasons.
+seasons <- 2020:2024
+##These seasons will later be plotted and faceted.
+all_shots <- data.frame()
+##Create an empty data frame that will get filled with the shot plots for each season.
+##Pull data for each season
+for(season in seasons){
+  season_shots <- load_nba_pbp(season=season)%>%
+    filter(team_id=="16", shooting_play==TRUE, !(type_id %in% 97:102))%>% ##This selects Wolves shooting plays that are not free throws. It is important to note that it does not matter if the wolves are home or away because it is grabbing the team ID of the shooting team.
+    mutate(season = season)
+  all_shots <- bind_rows(all_shots,season_shots)##This is the final step to add the shots for each season into the data frame that will be displayed next.
+}
+
+
+
+##Hex Binning
+bin_size <- 2 ##This makes it so each hexagon groups shots within a 2 ft by 2 ft area. If someone wanted smaller bins, they could change this variable to 1 to see hexagons that are 1 foot by 1 foot.
+wolves_binned <- all_shots%>%
+  mutate(hex_x=round(ifelse(coordinate_x< 0, -coordinate_y, coordinate_y)/bin_size)*bin_size,
+         hex_y=round(abs(coordinate_x)/bin_size)*bin_size)%>%
+  ##Since the coordinates are full court, I took the absolute value of the X coordinate to make it half court. When this happens the Y coordinates do not change and the shot is from the wrong side of the floor. To fix this, I made it so if the X coordinate was negative then the Y coordinate is negated to move the shot to the other side of the floor.
+  group_by(season, hex_x, hex_y)%>% ##I grouped each bin by the season and location. This will make it easier to plot the bins later.
+  summarise(attempts=n(), makes=sum(as.numeric(scoring_play)), fg_pct=round(makes/attempts*100,1), .groups='drop') ##Summarizing will make it so the interactive points show attempts and field goal percentage.
+
+
+
+##Plot With Faceting
+wolves_plot <- ggplot(wolves_binned %>% filter(attempts>=4), aes(x=hex_x, y=hex_y, text=paste0("Season: ", season, "<br>FG%: ", fg_pct,"%", "<br>Attempts: ", attempts)))+
+  ##ggplot uses the binned data to plot the points. The paste0 function makes the plot more understandable by labeling the numbers as they are displayed.
+  ##I filtered greater than 4 attempts because some spots were 1/1 and made the data misleading. Since the plots are interactive you could take this step out.
+  annotation_raster(timberwolves_court, xmin=-25, xmax=25, ymin=0, ymax=47)+
+  ##This is the size of half of an NBA court (47ft x 50ft).
+  geom_hex(stat="identity",alpha=0.75, aes(fill = fg_pct/100))+
+    ##I chose .75 for the alpha level because the court is still visible, and the spots are still colorful enough to understand them.
+  scale_fill_gradient2(low="red", mid="yellow", high="green",midpoint=0.5, labels=scales::percent, name ="FG%")+
+  ##Red, yellow, and green make the most sense because the wolves gray, blue, and green does not look good. The color of each hexagon is directly dependent on the field goal percentage from that spot.
+  labs(title="Minnesota Timberwolves Shot Chart by Season", y="Distance From The Baseline(ft)", x="Distance From Center of Court(ft)")+
+  scale_x_continuous(limits=c(-25,25), expand=c(0,0))+
+  scale_y_continuous(limits=c(47,0), expand=c(0,0), breaks=c(7,17,27,37,47),labels = c(40,30,20,10,0))+
+  ##This scale matches the annotation_raster scale
+  ##Since the rim is at the top of the plot, I had to adjust the y axis manually to make the labels correct.
+  theme_minimal()+
+  facet_wrap(~season) ##Facet the data by season. This makes the plots display next to one another, which makes it easy to compare trends over the seasons.
+
+
+
+##Interactive Plot
+ggplotly(wolves_plot, tooltip = "text")
+```
+
+   
+Key Findings:
+   - Absence of mid-range shot attempts
+   - More shots around the rim starting in 2022
+   - More efficient shooting around the rim since 2022
+   - Increase in 3-pointer spread since 2020
+   - Increase in 3-point percentage
+   
+Detailed Explanation of Findings:
+  Since 2020, there has been a steady absence of mid-range shot attempts in Timberwolves games. This is clear from the plots because places on the court with less than four shot attempts are filtered out. This creates a blank space from just inside the three-point line. Additionally, the interactive plot shows many other mid-range locations have 4-10 shot attempts. The reason for this is mid-range shot percentages and three-point shot percentages are fairly similar. Since three pointers are worth more points, the expected value is higher and taking a mid-range attempt doesn't make statistical sense. In comparison to mid-range shot attempts, locations around the rim have over 100 shot attempts and the location one foot from the center of the rim has over 1,000. Additionally, most of the three-point shots from near the line have 25-100 shot attempts, showing a preference for three-pointers over mid-range shots.
+  The absence of mid-range shot attempts has led to an increase in shots around the rim and from three-point range. When looking at the plots, hovering over shots in the center of the court in front of the rim shows an increase from 1,083 shot attempts in 2021 to 1,160 in 2022, 1,187 in 2023, and 1,151 in 2024. This large increase is likely due to the Timberwolves' acquisition of center Rudy Gobert, who is one of the league's most efficient shooters from around the rim.
+  In 2020 and 2021, the Timberwolves shot 67.4% and 72.3% from directly in front of the rim. With shots around the rim increasing, the field goal percentage from this area also increased. In 2022, the Wolves shot 73.1% from this area. In 2023, the Wolves shot 76.4% from this area, and in 2024, they shot 75.2% (this trend is present in other areas around the rim too). To compare more shots, the plots allow for interaction. Just hover the mouse over any hexagon on the plot and it will show attempts and field goal percentage.
+  With the absence of mid-range shot attempts, the shot distribution of three-point shot attempts has also changed. The plots show that although the number of three pointers taken may not have increased, the locations shots are taken from have changed. In 2020, many of the Timberwolves' three-pointers came from the top of the key. However, in the following years, the Timberwolves began taking more shots from the wings and corners. In 2020, the Timberwolves took roughly 30 more three-point attempts from the top of the key than in 2024. However, the Timberwolves took more shots from the wings and corners in 2024. In fact, the Timberwolves attempted less than four threes from locations within 4 feet of the baseline in 2020, so that spot is filtered out of the plots due to insufficient data.
+  The change in three-point locations has also led to a slight increase in three-point shooting percentages. By hovering over different points on the plots, slight increases in three-point percentages have been recorded over the years. Using the top of the key as an example again, in 2020, the Timberwolves shot 33.6% from this area. In 2024, the Timberwolves shot 46.7% from this area. To be clear, this is a huge change, and not all locations have this big of a change, but the increase in field goal percentage is still present.
+  
+   
+   
+ 
+   
+```{r,echo=FALSE, warning=FALSE, message=FALSE}
+##What if the NBA had a 4 point line?
+
+##install.packages("ggforce")
+library(ggforce) ##Used for drawing the four-point arc
+
+##On the three-point arc, the three point line is 23.75 feet from the center of the basket. The corners are 22 feet. The arc begins 14.75 feet from the baseline. The basket is 4 feet from the baseline.
+
+##Grabs the wolves shot data from before (2020-2024)
+wolves_shots <- wolves_binned %>%
+  mutate(y_adjusted=abs(abs(hex_y-47)-4), shot_distance=sqrt(hex_x^2 + y_adjusted^2))%>%
+##y_adjusted manipulates hex_y to be centered around 0 being the baseline. Since the hoop is 4 feet from the baseline the -4 makes it so the shot_distance gives the distance in relation to the basket rather than the baseline.
+  mutate(
+  y_distance = abs(hex_y - 47), ##Flip the y coordinates to be centered around 0 being the baseline.
+  shot_type = case_when(
+    y_distance < 14.75&abs(hex_x)>= 22~ "3PT",##Corner 3
+    shot_distance>=23.75~"3PT", ##Arc 3
+    TRUE~"2PT")) ##If it isn't a 3 it's a 2.
+
+wolves_shot_type <- wolves_shots%>%
+  group_by(shot_type)%>%
+  summarise(attempts=sum(attempts), makes=sum(makes), fg_pct=makes/attempts)%>%
+  mutate(expected_value = ifelse(shot_type== "2PT", 2 * fg_pct, 3 * fg_pct))
+##The expected value for wolves two point shots is 1.087224, and the expected value for three point shots is 1.078869. A four point line should have an expected value of about 1.08.
+##To get an expected value of 1.08 on a four point shot, shooters would need to shoot 27%
+
+##Find where shot % becomes 27%
+wolves_shot_distance <- wolves_shots%>%
+  group_by(shot_distance)%>%
+  summarise(attempts=sum(attempts), makes=sum(makes), fg_pct=makes/attempts)%>%
+  filter(fg_pct<=.28)%>%
+  arrange(desc(fg_pct))
+##Shooters shoot around 27% in shots between 29.6 and 30.6 feet feet from the center of the hoop. Based on this information, if I were to implement a four point line, I would set it at the 30 foot mark. 
+
+##How would this effect the Timberwolves?
+wolves_fours <- wolves_shots%>%
+  filter(shot_distance>=30)%>% ##30 being the 4-point distance
+  summarise(attempts=sum(attempts), makes=sum(makes), fg_pct=makes/attempts)%>%
+  mutate(expected_value= 4 * fg_pct)
+##wolves_fours shows that the expected value on four point shots would be 1.09 based on a 30 foot line. Over Anthony Edwards' first five seasons the Timberwolves made 148 of these shots, so if there was a four point line, the Wolves would score roughly 29.6 more points per season.
+##With this being said, threes taken from 29.9-26 feet would likely decline like the NBA has seen in two-point range. This is because the expected value of deep threes would be less than the expected value of taking four-point shots.
+
+##What would it look like?
+court_example <- ggplot()+
+  annotation_raster(timberwolves_court, xmin=-25, xmax=25, ymin=0, ymax=47)+ ##Wolves court
+  geom_arc(aes(x0=0, y0=43, r=30, start=pi/2, end=3*pi/2), color = "black", linewidth=1)+
+  ##x0=0 centers it around the center of the court, y0=43 centers it around basket location, and r=30 represents the 4 point line distance from the center of the hoop. The start and end just makes the arc.
+  coord_fixed(xlim= c(-25,25), ylim = c(0,47), expand=FALSE)+ ##Court dimension
+  theme_minimal()
+
+court_example
+```
+
